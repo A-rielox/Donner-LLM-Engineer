@@ -15,7 +15,7 @@ DB_NAME = str(Path(__file__).parent.parent / "vector_db")
 
 # embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-RETRIEVAL_K = 10
+RETRIEVAL_K = 5
 
 SYSTEM_PROMPT = """
 You are a knowledgeable, friendly assistant representing the company Insurellm.
@@ -35,14 +35,19 @@ def fetch_context(question: str) -> list[Document]:
     """
     Retrieve relevant context documents for a question.
     """
+
     return retriever.invoke(question, k=RETRIEVAL_K)
 
-
+# es una cosa de gusto, es para que las preguntas que ve el llm tenga el contexto de todo lo que ha dicho el usuario
+# esto lo hace mejor cuando el chat se trata de un solo tema, pero si el usuario
+# cambia de tema en el mismo chat, ya no sirve generalmente
 def combined_question(question: str, history: list[dict] = []) -> str:
     """
     Combine all the user's messages into a single string.
     """
+
     prior = "\n".join(m["content"] for m in history if m["role"] == "user")
+
     return prior + "\n" + question
 
 
@@ -50,12 +55,17 @@ def answer_question(question: str, history: list[dict] = []) -> tuple[str, list[
     """
     Answer the given question with RAG; return the answer and the context documents.
     """
+
     combined = combined_question(question, history)
     docs = fetch_context(combined)
+
     context = "\n\n".join(doc.page_content for doc in docs)
+
     system_prompt = SYSTEM_PROMPT.format(context=context)
+
     messages = [SystemMessage(content=system_prompt)]
-    messages.extend(convert_to_messages(history))
+    messages.extend(convert_to_messages(history)) # p' convertir openAI style messeges en LangChain style messeges
     messages.append(HumanMessage(content=question))
     response = llm.invoke(messages)
+
     return response.content, docs
