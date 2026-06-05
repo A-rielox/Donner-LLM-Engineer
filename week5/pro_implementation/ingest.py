@@ -6,7 +6,7 @@ from chromadb import PersistentClient
 from tqdm import tqdm
 from litellm import completion
 from multiprocessing import Pool
-from tenacity import retry, wait_exponential
+from tenacity import retry, wait_exponential # ⭐️
 
 
 load_dotenv(override=True)
